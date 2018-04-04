@@ -11,7 +11,7 @@ class ThreadQueryBinance (threading.Thread):
     threading.Thread.__init__(self)
     self.queue = queue
     self.symbol = symbol
-    self.limit = 2 # limit
+    self.limit = limit
     self.timestamp = int(timestamp)
 
   def run(self):
@@ -19,6 +19,7 @@ class ThreadQueryBinance (threading.Thread):
       url_to_call = "https://api.binance.com/api/v1/klines?symbol={}&interval=1m&limit={}&startTime={}" \
         .format(self.symbol, self.limit, self.timestamp)
       html = urlopen(url_to_call)
+      print("going to call {}".format(url_to_call))
       result_code = html.getcode()
       if result_code == 200:
         data = html.read().decode("utf-8")
@@ -38,36 +39,22 @@ def unstring_float(elem):
     return float(elem)
 
 
-if __name__ == "__main__":
-  # url_to_call = "https://api.binance.com/api/v1/klines?symbol=BTCUSDT&interval=1m&limit=500&startTime=1522692560"
-  # html = urlopen(url_to_call)
-  # data = html.read().decode("utf-8")
-  # data = json.loads(data)
-  # print(len(data))
-  # for idx, row in enumerate(data):
-  #   if len(row) == 12:
-  #     if idx == 0 or idx == 499:
-  #       print(row)
-  #     row = [unstring_float(elem) for elem in row]
-
-  # exit()
-
-
-  symbol = "BTCUSDT"
+def sniff(start_timestamp, end_timestamp, symbol):
   nb_threads = 10
   step_in_seconds = 60
-  end_timestamp = 1522692560
-  start_timestamp = 1522692560 - (30 * 24 * 3600)
   limit = 500
 
+  start_timestamp *= 1000
+  end_timestamp *= 1000
   f = open("binance_{}.csv".format(symbol), 'w+')
   f_start_price = open("binance_{}_only_start_price.csv".format(symbol), 'w+')
   queue = Queue()
-  for timestamp_group_start in range(start_timestamp, end_timestamp, nb_threads * step_in_seconds * limit):
+  step_size_in_ms = step_in_seconds * limit * 1000
+  for timestamp_group_start in range(start_timestamp, end_timestamp, nb_threads * step_size_in_ms):
     print("timestamp_group_start = {}".format(timestamp_group_start))
     start_small_serie_time = time.time()
 
-    timestamps_to_call = [timestamp_group_start + (thread_idx * step_in_seconds * limit) for thread_idx in range(20)]
+    timestamps_to_call = [timestamp_group_start + (thread_idx * step_size_in_ms) for thread_idx in range(nb_threads)]
     timestamps_to_call = [t for t in timestamps_to_call if t <= end_timestamp]
     threads = [ThreadQueryBinance(queue, symbol, limit, t) for t in timestamps_to_call]
     for thread in threads:
@@ -106,6 +93,15 @@ if __name__ == "__main__":
 
   f.close()
   f_start_price.close()
+
+
+if __name__ == "__main__":
+  start_timestamp = 1519858800
+  end_timestamp = 1522533600
+  symbols = ["BTCUSDT"]
+  for symbol in symbols:
+    sniff(start_timestamp, end_timestamp, symbol)
+  
 
 
 
