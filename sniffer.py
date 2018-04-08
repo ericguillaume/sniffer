@@ -24,7 +24,7 @@ class ThreadQueryBinance (threading.Thread):
       if result_code == 200:
         data = html.read().decode("utf-8")
         data = json.loads(data)
-        queue.put(data)
+        self.queue.put(data)
       else:
         print("error result_code = {}".format(result_code))
     except Exception as e:
@@ -98,7 +98,9 @@ def sniff(start_timestamp, end_timestamp, symbol):
 if __name__ == "__main__":
   start_timestamp = 1519858800
   end_timestamp = 1522533600
-  symbols = ["BTCUSDT"]
+  symbols = ["BTMBTC", "STEEMBTC", "PPTBTC", "DGDBTC", "BCNBTC", "SCBTC", "BTSBTC", "BCDBTC", "WAVESBTC", "STRATBTC", \
+    "RHOCBRC", "AEBTC", "SNTBTC", "ZILBTC", "ZRXBTC", "KMDBTC"] #["XVGBTC", "ICXBTC", "ONTBTC", "NANOBTC", "ZECBTC"]
+    # don't work with ["RHOCBRC", "BCHBTC", "BTGMBTC", "BTMBTC", "SCBTC", "REPBTC", "ARDRBTC", "BTCPBTC", "DCRBTC", "DOGEBTC", "MKRBTC"
   for symbol in symbols:
     sniff(start_timestamp, end_timestamp, symbol)
   
