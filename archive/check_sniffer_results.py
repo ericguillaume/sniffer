@@ -2,7 +2,7 @@ import csv
 from datetime import timedelta
 
 
-spamReader = csv.reader(open('binance_BTCUSDT_only_start_price.csv', newline=''), delimiter=',', quotechar='|')
+spamReader = csv.reader(open('data/binance_2_months/binance_BTCUSDT_only_start_price.csv', newline=''), delimiter=',', quotechar='|')
 
 expected_first_row_timestamp = 1519858800000
 expected_last_row_timestamp = 1522533600000
