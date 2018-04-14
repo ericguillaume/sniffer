@@ -6,6 +6,9 @@ from queue import Queue
 import json
 
 
+from config import SYMBOLS
+
+
 class ThreadQueryBinance (threading.Thread):
   def __init__(self, queue, symbol, limit, timestamp):
     threading.Thread.__init__(self)
@@ -46,8 +49,8 @@ def sniff(start_timestamp, end_timestamp, symbol):
 
   start_timestamp *= 1000
   end_timestamp *= 1000
-  f = open("binance_{}.csv".format(symbol), 'w+')
-  f_start_price = open("binance_{}_only_start_price.csv".format(symbol), 'w+')
+  f = open("data/binance_2_months/binance_{}.csv".format(symbol), 'w+')
+  f_start_price = open("data/binance_2_months/binance_{}_only_start_price.csv".format(symbol), 'w+')
   queue = Queue()
   step_size_in_ms = step_in_seconds * limit * 1000
   for timestamp_group_start in range(start_timestamp, end_timestamp, nb_threads * step_size_in_ms):
@@ -96,12 +99,15 @@ def sniff(start_timestamp, end_timestamp, symbol):
 
 
 if __name__ == "__main__":
-  start_timestamp = 1519858800
-  end_timestamp = 1522533600
-  symbols = ["BTMBTC", "STEEMBTC", "PPTBTC", "DGDBTC", "BCNBTC", "SCBTC", "BTSBTC", "BCDBTC", "WAVESBTC", "STRATBTC", \
-    "RHOCBRC", "AEBTC", "SNTBTC", "ZILBTC", "ZRXBTC", "KMDBTC"] #["XVGBTC", "ICXBTC", "ONTBTC", "NANOBTC", "ZECBTC"]
-    # don't work with ["RHOCBRC", "BCHBTC", "BTGMBTC", "BTMBTC", "SCBTC", "REPBTC", "ARDRBTC", "BTCPBTC", "DCRBTC", "DOGEBTC", "MKRBTC"
-  for symbol in symbols:
+  # 1 month data
+  # start_timestamp = 1519858800
+  # end_timestamp = 1522533600
+
+  # 100 days data
+  start_timestamp = 1518822000
+  end_timestamp = 1523311200
+
+  for symbol in SYMBOLS:
     sniff(start_timestamp, end_timestamp, symbol)
   
 
