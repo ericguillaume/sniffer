@@ -3,6 +3,7 @@ import csv
 
 
 from config import SYMBOLS
+from utils import convert_symbol_into_usdt
 
 
 
@@ -16,10 +17,10 @@ def convert_to_usdt(symbol):
     for row in spamreader:
       dict_btc_usdt[int(row[0])] = float(row[1])
 
-  new_symbol = symbol.replace("BTC", "USDT")
+  usdt_symbol = convert_symbol_into_usdt(symbol)
 
-  print("going to write in data/binance_2_months/binance_{}_only_start_price.csv".format(new_symbol))
-  f_start_price = open("data/binance_2_months/binance_{}_only_start_price.csv".format(new_symbol), 'w+')
+  print("going to write in data/binance_2_months/binance_{}_only_start_price.csv".format(usdt_symbol))
+  f_start_price = open("data/binance_2_months/binance_{}_only_start_price.csv".format(usdt_symbol), 'w+')
   with open("data/binance_2_months/binance_{}_only_start_price.csv".format(symbol), 'r') as csvfile:
     spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
     for row in spamreader:
@@ -28,7 +29,7 @@ def convert_to_usdt(symbol):
       currency_in_usdt = currency_in_btc * dict_btc_usdt[timestamp]
       new_row = [timestamp, currency_in_usdt]
 
-      # write currency_in_usdt
+      # write currency_into file
       new_row = [str(x) for x in new_row]
       row_to_write_start_price = ','.join(new_row[:2]) + "\n"
       print(row_to_write_start_price)
