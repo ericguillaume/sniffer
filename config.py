@@ -10,4 +10,4 @@ SYMBOLS = ["BTCUSDT", "ETHBTC", "XRPBTC", "BCCBTC", "LTCBTC", "EOSBTC", "ADABTC"
 
 USDT_SYMBOLS = [convert_symbol_into_usdt(x) for x in SYMBOLS]
 
-DATA_FOLDER_NAME = "data/binance_2_months"
+DATA_FOLDER_NAME = "data/binance_2_months_15_days"
