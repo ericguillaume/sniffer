@@ -8,6 +8,8 @@ SYMBOLS = ["BTCUSDT", "ETHBTC", "XRPBTC", "BCCBTC", "LTCBTC", "EOSBTC", "ADABTC"
              "LSKBTC", "ONTBTC", "ICXBTC", "ZECBTC", "NANOBTC", "BTGBTC", "STEEMBTC", "WANBTC", "PPTBTC", "BTSBTC", \
              "DGDBTC", "STRATBTC", "WAVESBTC", "ZILBTC"]
 
+USDT_SYMBOL_EXCHANGEABLE_WITH_USDT = [convert_symbol_into_usdt(x) for x in ["BTCUSDT", "ETHBTC", "BCCBTC", "LTCBTC", "ADABTC", "NEOBTC", "BNBBTC", "QTUMBTC"]]
+
 USDT_SYMBOLS = [convert_symbol_into_usdt(x) for x in SYMBOLS]
 
 DATA_FOLDER_NAME = "data/binance_2_months_15_days"

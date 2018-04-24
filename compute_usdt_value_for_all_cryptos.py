@@ -19,8 +19,8 @@ def convert_to_usdt(symbol):
 
   usdt_symbol = convert_symbol_into_usdt(symbol)
 
-  print("going to write in {}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME).format(usdt_symbol))
-  f_start_price = open("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME).format(usdt_symbol), 'w+')
+  print("going to write in {}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME, usdt_symbol))
+  f_start_price = open("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME, usdt_symbol), 'w+')
   with open("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME, symbol), 'r') as csvfile:
     spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
     for row in spamreader:
