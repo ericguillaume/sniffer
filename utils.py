@@ -1,5 +1,9 @@
 
 
+
+def is_symbol_in_usdt(symbol):
+  return not symbol.endswith("BTC")
+
 def convert_symbol_into_usdt(symbol):
   if symbol.endswith("BTC"):
     return symbol.replace("BTC", "USDT")

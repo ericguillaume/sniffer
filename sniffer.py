@@ -6,7 +6,7 @@ from queue import Queue
 import json
 
 
-from config import SYMBOLS, DATA_FOLDER_NAME
+from config import SYMBOLS, DATA_FOLDER_NAME_WRITE
 
 
 class ThreadQueryBinance (threading.Thread):
@@ -49,8 +49,8 @@ def sniff(start_timestamp, end_timestamp, symbol):
 
   start_timestamp *= 1000
   end_timestamp *= 1000
-  f = open("{}/binance_{}.csv".format(DATA_FOLDER_NAME, symbol), 'w+')
-  f_start_price = open("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME, symbol), 'w+')
+  f = open("{}/binance_{}.csv".format(DATA_FOLDER_NAME_WRITE, symbol), 'w+')
+  f_start_price = open("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME_WRITE, symbol), 'w+')
   queue = Queue()
   step_size_in_ms = step_in_seconds * limit * 1000
   for timestamp_group_start in range(start_timestamp, end_timestamp, nb_threads * step_size_in_ms):
@@ -114,6 +114,10 @@ if __name__ == "__main__":
   # 2 months 15 days data
   start_timestamp = 1518822000
   end_timestamp = 1524348000
+
+  # 2 months 15 days data
+  # start_timestamp = 1512082800 # 1st December 2017
+  # end_timestamp = 1524780000 # 17th april 2018
 
   for symbol in SYMBOLS:
     sniff(start_timestamp, end_timestamp, symbol)

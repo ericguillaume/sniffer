@@ -1,0 +1,1 @@
+curl -H "X-MBX-APIKEY: J4ESZQryhdnU17QFUZ9O855u8nMu7FHmtHnjXc7ZekzzWHrbM8GsTiNknEpiyQv5" -X POST 'https://api.binance.com/api/v3/order/test?symbol=LTCBTC&side=BUY&type=LIMIT&timeInForce=GTC&quantity=1&price=0.1&recvWindow=5000&timestamp=1499827319559&signature=2d5fc07b718ebf8d9acf460f7787105306c6ccae0178bcf3d8eec71bd8bf4614'
