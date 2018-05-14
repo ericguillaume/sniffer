@@ -172,7 +172,7 @@ class ThreadUpdatePricesBinance(threading.Thread):
       self.symbol_prices_container.add_price(timestamp, price)
 
 
-def do_get_current_price(symbol):
+def do_get_current_price(symbol): # on manipule des USDT OU DES BTC ICI ???
   try:
     url_to_call = "https://api.binance.com/api/v3/ticker/price?symbol={}".format(symbol)
     # print("get_current_symbol_price: going to call {}".format(url_to_call))
@@ -189,7 +189,7 @@ def do_get_current_price(symbol):
       return False, 0.0, 0.0
   except Exception as e:
     print(e)
-    pass
+    return False, 0.0, 0.0
 
 
 bucket_middle = 0 #0.003 # sure ou 0.004 ???      0 ???
@@ -238,20 +238,21 @@ class BuyManager(threading.Thread):
 
     ## buy here
 
-    time.sleep(keep_for_k_minutes * 60)
+    time.sleep(self.keep_for_k_minutes * 60)
     sell_time = time.time()
-    success, sell_price, _ = do_get_current_price(symbol)  # try twice
+    success, sell_price, _ = do_get_current_price(self.symbol)  # try twice
     if not success:
       print("couldn't sell {} bought at time {} price {}, sell at time :{}"\
-            .format(symbol, buy_time, self.buy_price, sell_time))
+            .format(self.symbol, buy_time, self.buy_price, sell_time))
       return True
 
     # sell
 
+    print("sell_price = {}".format(sell_price))
     profit = sell_price - self.buy_price
     relative_profit = profit / self.buy_price
-    print("SOLD {}: relative_profit = {}  ---  bought at time {} price {}, sell at time :{}, price: {}"\
-            .format(symbol, relative_profit, buy_time, self.buy_price, sell_time, sell_price))
+    print("SOLD {}: relative_profit = {}  ---  bought at time {} price {}, sell at time: {}, price: {}"\
+            .format(self.symbol, relative_profit, buy_time, self.buy_price, sell_time, sell_price))
     return True
 
 
