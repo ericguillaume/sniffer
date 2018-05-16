@@ -192,7 +192,7 @@ def do_get_current_price(symbol): # on manipule des USDT OU DES BTC ICI ???
     return False, 0.0, 0.0
 
 
-bucket_middle = 0 #0.003 # sure ou 0.004 ???      0 ???
+bucket_middle = 0.003 # sure ou 0.004 ???      0 ???
 def get_bucket(value):
   if value <= -bucket_middle:
     return -1
@@ -308,7 +308,7 @@ while True:
   # decision or not to buy
   # todo minutes_before_retrying
 
-  min_diff_domains_to_buy_or_sell = 0.80 # 0.8 ????
+  min_diff_domains_to_buy_or_sell = 0.90 # 0.8 ????
   for symbol in selected_symbols:
 
     #diff = d_symbol_diff[symbol]   pas ca ?????
@@ -321,8 +321,9 @@ while True:
 
     bucket = d_symbol_bucket[symbol]
     diff = d_symbol_diff[symbol]
+    diff = d_symbol_diff[symbol]
     relative_diff = d_symbol_relative_diff[symbol]
-    condition_to_buy = (bucket == 1 and relative_diff <= 0.005) # RD pk c est statique ca ??? et pas dynamique ??      WARNING:::: diff / price[0] EST CE BIEN COMME CA LAUTRE le jupyter
+    condition_to_buy = (bucket == 1 and diff <= 0.005) # relative_diff # RD pk c est statique ca ??? et pas dynamique ??      WARNING:::: diff / price[0] EST CE BIEN COMME CA LAUTRE le jupyter
     if not condition_to_buy:
       #print("no condition to buy: bucket={}, relative_diff={}".format(bucket, relative_diff))
       continue
