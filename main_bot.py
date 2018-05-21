@@ -1,4 +1,4 @@
-# python3 main_bot.py 2>&1 | tee -a XXX
+# python3 main_bot.py | tee -a XXX
 import time
 import json
 import random
@@ -19,12 +19,45 @@ from utils import is_symbol_in_usdt, convert_symbol_into_usdt, log
 #     self.usdt_name = convert_symbol_into_usdt(name)
 
 
+class TimeManager:
+
+  timestamp = None # "now" or timestamp
+
+  @classmethod
+  def set_mode_real_time(cls):
+    TimeManager.timestamp = "now"
+
+  @classmethod
+  def is_real_time(cls):
+    return timestamp == "now"
+
+  @classmethod
+  def set_timestamp(cls, timestamp):
+    TimeManager.timestamp = timestamp
+
+  @classmethod
+  def add_seconds(cls, seconds):
+    if not TimeManager.is_real_time():
+      TimeManager.timestamp += seconds
+
+  @classmethod
+  def time(cls):
+    if TimeManager.timestamp == None:
+      raise Exception("ERROR TimeManager was called but was not set in any mode")
+    elif TimeManager.timestamp == "now":
+      return time.time()
+    else:
+      return TimeManager.timestamp
+
+
+
+
 class AllSymbolPricesManager:
   def __init__(self):
     self.d_symbol_container = {}
 
-  def add_symbol(self, symbol, seconds_between_queries):
-    self.d_symbol_container[symbol] = SymbolPricesContainer(symbol, seconds_between_queries)
+  def add_symbol(self, symbol):
+    self.d_symbol_container[symbol] = SymbolPricesContainer(symbol)
     return self.d_symbol_container[symbol]
 
   def get_container(self, symbol):
@@ -62,15 +95,17 @@ class AllSymbolPricesManager:
 class SymbolPricesContainer:
   max_time_to_cache_prices = 2 * 3600
   max_added_prices_before_cleaning = 100
+  max_time_price_can_be_late = 45
 
   # verifier
-  def __init__(self, symbol, seconds_between_queries):
+  def __init__(self, symbol):
     self.symbol = symbol
-    self.seconds_between_queries = seconds_between_queries
     self.array_timestamp_price = []
     self.added_prices_since_last_cache_clean = 0
+    self.lock = threading.Lock()
 
-  def get_first_older_element_index(self, timestamp): # add lock
+  # not thread safe
+  def get_first_older_element_index(self, timestamp):
     for idx, t_and_price in enumerate(self.array_timestamp_price): # peut on mettre du t, price ici  (sans enumerate marchait ??)
       t = t_and_price[0]
       if t > timestamp:
@@ -78,8 +113,10 @@ class SymbolPricesContainer:
     return len(self.array_timestamp_price)
 
   def add_price(self, timestamp, price):
+    self.lock.acquire()
     index_to_insert = self.get_first_older_element_index(timestamp)
     self.array_timestamp_price.insert(index_to_insert, (timestamp, price))
+    self.lock.release()
 
     self.clean_old_positions_if_need_be()
 
@@ -90,8 +127,10 @@ class SymbolPricesContainer:
 
   def clean_old_positions(self):
     timestamp = time.time()
+    self.lock.acquire()
     self.array_timestamp_price = [x for x in self.array_timestamp_price if
                                   x[0] >= timestamp - SymbolPricesContainer.max_time_to_cache_prices]  # does it keep order
+    self.lock.release()
     self.added_prices_since_last_cache_clean = 0
 
   def query_and_add_price(self, timestamp): # try twice catch error
@@ -112,41 +151,53 @@ class SymbolPricesContainer:
 
       for timestamp, price in array_t_prices:
         self.add_price(timestamp, price) # dichotomie permet de se contenter de faire ca !!!  GERER CAS D ERREUR ICI   THROW ERROR SI RIEN
-      return array_t_prices[-1][1]
+      if abs(array_t_prices[0][0] - timestamp) < abs(array_t_prices[1][0] - timestamp):
+        return array_t_prices[0]
+      else:
+        return array_t_prices[1]
     else:
       raise Exception("ERROR query_and_add_price didnt return anything for symbol: {} and timestamp: {}".format(symbol, timestamp))
 
 
   # attention price can be very very far :/    FETCH IT IF NEED BE
   def get_price(self, timestamp): # tester temps, si marche pas passer en dichotomie
+    self.lock.acquire()
     if len(self.array_timestamp_price) == 0:
       raise Exception("ERROR price asked while there was none for symbol = {}".format(symbol))
 
     is_smallest_distance_defined = False
     smallest_distance = 0.0
     smallest_distance_price = 0.0
+    smallest_distance_timestamp = 0.0
     for t, price in self.array_timestamp_price:
       distance = abs(timestamp - t)
       if not is_smallest_distance_defined:
         smallest_distance = distance
         smallest_distance_price = price
+        smallest_distance_timestamp = t
         is_smallest_distance_defined = True
       else:
         if distance <= smallest_distance:
           smallest_distance = distance
           smallest_distance_price = price
+          smallest_distance_timestamp = t
+    self.lock.release()
 
     #log("smallest_distance = {}".format(smallest_distance))
-    if smallest_distance <= self.seconds_between_queries:
+    if smallest_distance <= SymbolPricesContainer.max_time_price_can_be_late:
+      log("DEBUG get_price: FOUND {} late by {} s".format(self.symbol, timestamp - smallest_distance_timestamp))
       return smallest_distance_price
     else:
-      return self.query_and_add_price(timestamp)
+      ticker_timpestamp, price = self.query_and_add_price(timestamp)
+      log("DEBUG get_price: QUERIED {} late by {} s".format(self.symbol, timestamp - ticker_timpestamp))
+      return price
 
   def get_last_price(self): # attention peut fail, prix peut etre plus vieux d une minute... si cest btc ou eth on veut casser l algo et pas le faire .!!
-    return self.array_timestamp_price[-1][1] #### si vide demander le prix !!
-
-
-
+    self.lock.acquire()
+    log("DEBUG get_last_price late by {} s".format(time.time() - self.array_timestamp_price[-1][0]))
+    timpestamp_price = self.array_timestamp_price[-1][1] #### si vide demander le prix !!
+    self.lock.release()
+    return timpestamp_price
 
 
 
@@ -156,21 +207,23 @@ class ThreadUpdatePricesBinance(threading.Thread):
     threading.Thread.__init__(self)
     self.symbol = symbol
     self.prices_manager = prices_manager
-    self.symbol_prices_container = prices_manager.add_symbol(symbol, seconds_between_queries)
+    self.symbol_prices_container = prices_manager.add_symbol(symbol)
     self.seconds_between_queries = seconds_between_queries
 
   def run(self):
-    #while True: debug todo
-    i = 0
-    while i <= 5: # debug
-      i += 1
+    while True:
       self.get_current_symbol_price()
       time.sleep(self.seconds_between_queries)
+    # i = 0
+    # while i <= 5: # debug
+    #   i += 1
 
   def get_current_symbol_price(self):
     success, price, timestamp = do_get_current_price(self.symbol)
     if success:
       self.symbol_prices_container.add_price(timestamp, price)
+
+
 
 
 def do_get_current_price(symbol): # on manipule des USDT OU DES BTC ICI ???
@@ -248,10 +301,15 @@ class BuyManager(threading.Thread):
       return True
 
     # sell
+    sell_time = time.time()
 
     log("sell_price = {}".format(sell_price))
     profit = sell_price - self.buy_price
     relative_profit = profit / self.buy_price
+
+    time_currency_kept = sell_time - buy_time
+    log("DEBUG time_currency_kept: {}, diff with expected = {}" \
+      .format(time_currency_kept, abs(time_currency_kept - self.keep_for_k_minutes * 60)))
     log("SOLD {}: relative_profit = {}  ---  bought at time {} price {}, sell at time: {}, price: {}"\
             .format(self.symbol, relative_profit, buy_time, self.buy_price, sell_time, sell_price))
     return True
@@ -260,11 +318,18 @@ class BuyManager(threading.Thread):
 
 
 
+# start_timestamp = 
+# end_timestamp =
+# TimeManager.set_timestamp(start_timestamp)
+
+
+
+
 
 selected_symbols = SYMBOLS[:30] # limiter later
 prices_manager = AllSymbolPricesManager()
 
-seconds_between_queries = 0.1
+seconds_between_queries = 15
 threads = [ThreadUpdatePricesBinance(prices_manager, symbol, seconds_between_queries) for symbol in selected_symbols]
 for thread in threads:
   thread.start()
@@ -277,7 +342,7 @@ time.sleep(3)
 keep_for_k_minutes = 10
 
 d_symbol_diff = {} # its the usdt diff
-d_symbol_relative_diff = {} # its the usdt diff
+d_symbol_relative_diff = {} # its the usdt relative diff
 d_symbol_bucket = {} # its the usdt bucket
 d_symbol_t_before_retrying = {}
 dont_touch_same_currency_for_n_minutes = 50 # todo at start how can it be ????? evaluate !!!!!!!!!!!!!!
@@ -288,6 +353,8 @@ for symbol in selected_symbols:
 
 while True:
   log("entering big loop to check for BUYING, t: {}".format(int(time.time())))
+  timpestamp_start_compute_features = time.time()
+
   # compute diffs, buckets etc..
   d_symbol_last_price = prices_manager.get_last_usdt_prices(selected_symbols)
   d_symbol_old_price = prices_manager.get_one_hour_ago_usdt_prices(selected_symbols)
@@ -304,11 +371,14 @@ while True:
     #log("{} - cur_price: {}, old_price: {}, diff / old_price: {},bucket : {} ".format(symbol, cur_price, old_price, (diff / old_price), bucket))
     domain_diffs += bucket
   domain_diffs /= len(selected_symbols)
+  timpestamp_end_compute_features = time.time()
+  log("DEBUG features computed in {} s".format(timpestamp_end_compute_features - timpestamp_start_compute_features))
   log("domain_diffs: {}".format(domain_diffs))
 
   # decision or not to buy
   # todo minutes_before_retrying
 
+  timpestamp_start_deciding_to_buy = time.time()
   min_diff_domains_to_buy_or_sell = 0.90 # 0.8 ????
   for symbol in selected_symbols:
 
@@ -337,6 +407,10 @@ while True:
     d_symbol_t_before_retrying[symbol] = time.time() + (dont_touch_same_currency_for_n_minutes * 60)
     buy = BuyManager(symbol, keep_for_k_minutes, buy_price)
     buy.start()
+
+  timpestamp_end_deciding_to_buy = time.time()
+  log("DEBUG decided to buy in {} s".format(timpestamp_end_deciding_to_buy - timpestamp_start_deciding_to_buy))
+
   time.sleep(30)
 
 
