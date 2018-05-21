@@ -29,7 +29,9 @@ class TimeManager:
 
   @classmethod
   def is_real_time(cls):
-    return timestamp == "now"
+    if TimeManager.timestamp == None:
+      raise Exception("ERROR TimeManager was called but was not set in any mode")
+    return TimeManager.timestamp == "now"
 
   @classmethod
   def set_timestamp(cls, timestamp):
@@ -37,6 +39,8 @@ class TimeManager:
 
   @classmethod
   def add_seconds(cls, seconds):
+    if TimeManager.timestamp == None:
+      raise Exception("ERROR TimeManager was called but was not set in any mode")
     if not TimeManager.is_real_time():
       TimeManager.timestamp += seconds
 
@@ -74,7 +78,7 @@ class AllSymbolPricesManager:
     return d_symbol_last_price
 
   def get_one_hour_ago_usdt_prices(self, symbols):
-    old_timestamp = time.time() - 3600
+    old_timestamp = TimeManager.time() - 3600
     old_btc_price = self.get_btc_price(old_timestamp)
 
     d_symbol_old_price = {} ## todo paralleliser si ca prend du temps de faire ces demandes !!!!!!!!!!!!!, chronometrerrrrr
@@ -126,7 +130,7 @@ class SymbolPricesContainer:
       self.clean_old_positions()
 
   def clean_old_positions(self):
-    timestamp = time.time()
+    timestamp = TimeManager.time()
     self.lock.acquire()
     self.array_timestamp_price = [x for x in self.array_timestamp_price if
                                   x[0] >= timestamp - SymbolPricesContainer.max_time_to_cache_prices]  # does it keep order
@@ -193,12 +197,14 @@ class SymbolPricesContainer:
       return price
 
   def get_last_price(self): # attention peut fail, prix peut etre plus vieux d une minute... si cest btc ou eth on veut casser l algo et pas le faire .!!
-    self.lock.acquire()
-    log("DEBUG get_last_price late by {} s".format(time.time() - self.array_timestamp_price[-1][0]))
-    timpestamp_price = self.array_timestamp_price[-1][1] #### si vide demander le prix !!
-    self.lock.release()
-    return timpestamp_price
-
+    if TimeManager.is_real_time():
+      self.lock.acquire()
+      log("DEBUG get_last_price late by {} s".format(TimeManager.time() - self.array_timestamp_price[-1][0]))
+      timpestamp_price = self.array_timestamp_price[-1][1] #### si vide demander le prix !!
+      self.lock.release()
+      return timpestamp_price
+    else:
+      return self.get_price(TimeManager.time())
 
 
 
@@ -211,6 +217,9 @@ class ThreadUpdatePricesBinance(threading.Thread):
     self.seconds_between_queries = seconds_between_queries
 
   def run(self):
+    if not TimeManager.is_real_time():
+      return True
+
     while True:
       self.get_current_symbol_price()
       time.sleep(self.seconds_between_queries)
@@ -227,6 +236,9 @@ class ThreadUpdatePricesBinance(threading.Thread):
 
 
 def do_get_current_price(symbol): # on manipule des USDT OU DES BTC ICI ???
+  if not TimeManager.is_real_time():
+    raise Exception("ERROR do_get_current_price called in not real time mode")
+
   try:
     url_to_call = "https://api.binance.com/api/v3/ticker/price?symbol={}".format(symbol)
     # log("get_current_symbol_price: going to call {}".format(url_to_call))
@@ -287,21 +299,24 @@ class BuyManager(threading.Thread):
     self.buy_price = buy_price
 
   def run(self):
+    if not TimeManager.is_real_time():
+      return True
+
     log("we are going to buy {}".format(symbol))
-    buy_time = time.time()
+    buy_time = TimeManager.time()
 
     ## buy here
 
     time.sleep(self.keep_for_k_minutes * 60)
+
+    ## sell here
+
     sell_time = time.time()
     success, sell_price, _ = do_get_current_price(self.symbol)  # try twice
     if not success:
       log("couldn't sell {} bought at time {} price {}, sell at time :{}"\
             .format(self.symbol, buy_time, self.buy_price, sell_time))
       return True
-
-    # sell
-    sell_time = time.time()
 
     log("sell_price = {}".format(sell_price))
     profit = sell_price - self.buy_price
@@ -347,12 +362,12 @@ d_symbol_bucket = {} # its the usdt bucket
 d_symbol_t_before_retrying = {}
 dont_touch_same_currency_for_n_minutes = 50 # todo at start how can it be ????? evaluate !!!!!!!!!!!!!!
 
-timestamp = time.time()
+timestamp = TimeManager.time()
 for symbol in selected_symbols:
   d_symbol_t_before_retrying[symbol] = 0 # timestamp + (60 * 1) # timestamp + dont_touch_same_currency_for_n_minutes ??????   attention secondes minutes
 
 while True:
-  log("entering big loop to check for BUYING, t: {}".format(int(time.time())))
+  log("entering big loop to check for BUYING, t: {}".format(int(TimeManager.time())))
   timpestamp_start_compute_features = time.time()
 
   # compute diffs, buckets etc..
@@ -386,7 +401,7 @@ while True:
     if not (domain_diffs >= min_diff_domains_to_buy_or_sell):
       continue
 
-    if not time.time() >= d_symbol_t_before_retrying[symbol]: # mettre un lock la dessus aussi ou pas ???
+    if not TimeManager.time() >= d_symbol_t_before_retrying[symbol]: # mettre un lock la dessus aussi ou pas ???
       #log("timestamps is too young")
       continue
 
@@ -404,7 +419,7 @@ while True:
     if not success:
       continue
 
-    d_symbol_t_before_retrying[symbol] = time.time() + (dont_touch_same_currency_for_n_minutes * 60)
+    d_symbol_t_before_retrying[symbol] = TimeManager.time() + (dont_touch_same_currency_for_n_minutes * 60)
     buy = BuyManager(symbol, keep_for_k_minutes, buy_price)
     buy.start()
 
@@ -412,6 +427,7 @@ while True:
   log("DEBUG decided to buy in {} s".format(timpestamp_end_deciding_to_buy - timpestamp_start_deciding_to_buy))
 
   time.sleep(30)
+  TimeManager.add_seconds(30)
 
 
 
