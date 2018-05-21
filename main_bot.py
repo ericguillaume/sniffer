@@ -1,3 +1,4 @@
+# python3 main_bot.py 2>&1 | tee -a XXX
 import time
 import json
 import random
@@ -6,7 +7,7 @@ from urllib.request import urlopen
 
 
 from config import SYMBOLS
-from utils import is_symbol_in_usdt, convert_symbol_into_usdt
+from utils import is_symbol_in_usdt, convert_symbol_into_usdt, log
 
 
 
@@ -100,7 +101,7 @@ class SymbolPricesContainer:
 
     url_to_call = "https://api.binance.com/api/v1/klines?symbol={}&interval=1m&limit={}&startTime={}&endTime={}" \
       .format(self.symbol, limit, timestamp_in_ms - one_minute_in_ms, timestamp_in_ms + one_minute_in_ms)
-    #print("query_and_add_price going to call {}".format(url_to_call))
+    #log("query_and_add_price going to call {}".format(url_to_call))
     html = urlopen(url_to_call)
 
     result_code = html.getcode()
@@ -135,7 +136,7 @@ class SymbolPricesContainer:
           smallest_distance = distance
           smallest_distance_price = price
 
-    #print("smallest_distance = {}".format(smallest_distance))
+    #log("smallest_distance = {}".format(smallest_distance))
     if smallest_distance <= self.seconds_between_queries:
       return smallest_distance_price
     else:
@@ -175,7 +176,7 @@ class ThreadUpdatePricesBinance(threading.Thread):
 def do_get_current_price(symbol): # on manipule des USDT OU DES BTC ICI ???
   try:
     url_to_call = "https://api.binance.com/api/v3/ticker/price?symbol={}".format(symbol)
-    # print("get_current_symbol_price: going to call {}".format(url_to_call))
+    # log("get_current_symbol_price: going to call {}".format(url_to_call))
     html = urlopen(url_to_call)
     result_code = html.getcode()
     if result_code == 200:
@@ -185,10 +186,10 @@ def do_get_current_price(symbol): # on manipule des USDT OU DES BTC ICI ???
       price = float(data["price"])
       return True, price, timestamp
     else:
-      print("error result_code = {}".format(result_code))
+      log("error result_code = {}".format(result_code))
       return False, 0.0, 0.0
   except Exception as e:
-    print(e)
+    log(e)
     return False, 0.0, 0.0
 
 
@@ -233,7 +234,7 @@ class BuyManager(threading.Thread):
     self.buy_price = buy_price
 
   def run(self):
-    print("we are going to buy {}".format(symbol))
+    log("we are going to buy {}".format(symbol))
     buy_time = time.time()
 
     ## buy here
@@ -242,16 +243,16 @@ class BuyManager(threading.Thread):
     sell_time = time.time()
     success, sell_price, _ = do_get_current_price(self.symbol)  # try twice
     if not success:
-      print("couldn't sell {} bought at time {} price {}, sell at time :{}"\
+      log("couldn't sell {} bought at time {} price {}, sell at time :{}"\
             .format(self.symbol, buy_time, self.buy_price, sell_time))
       return True
 
     # sell
 
-    print("sell_price = {}".format(sell_price))
+    log("sell_price = {}".format(sell_price))
     profit = sell_price - self.buy_price
     relative_profit = profit / self.buy_price
-    print("SOLD {}: relative_profit = {}  ---  bought at time {} price {}, sell at time: {}, price: {}"\
+    log("SOLD {}: relative_profit = {}  ---  bought at time {} price {}, sell at time: {}, price: {}"\
             .format(self.symbol, relative_profit, buy_time, self.buy_price, sell_time, sell_price))
     return True
 
@@ -286,7 +287,7 @@ for symbol in selected_symbols:
   d_symbol_t_before_retrying[symbol] = 0 # timestamp + (60 * 1) # timestamp + dont_touch_same_currency_for_n_minutes ??????   attention secondes minutes
 
 while True:
-  print("entering big loop to check for BUYING, t: {}".format(int(time.time())))
+  log("entering big loop to check for BUYING, t: {}".format(int(time.time())))
   # compute diffs, buckets etc..
   d_symbol_last_price = prices_manager.get_last_usdt_prices(selected_symbols)
   d_symbol_old_price = prices_manager.get_one_hour_ago_usdt_prices(selected_symbols)
@@ -300,10 +301,10 @@ while True:
     d_symbol_relative_diff[symbol] = relative_diff
     bucket = get_bucket(relative_diff)
     d_symbol_bucket[symbol] = bucket
-    #print("{} - cur_price: {}, old_price: {}, diff / old_price: {},bucket : {} ".format(symbol, cur_price, old_price, (diff / old_price), bucket))
+    #log("{} - cur_price: {}, old_price: {}, diff / old_price: {},bucket : {} ".format(symbol, cur_price, old_price, (diff / old_price), bucket))
     domain_diffs += bucket
   domain_diffs /= len(selected_symbols)
-  print("domain_diffs: {}".format(domain_diffs))
+  log("domain_diffs: {}".format(domain_diffs))
 
   # decision or not to buy
   # todo minutes_before_retrying
@@ -316,7 +317,7 @@ while True:
       continue
 
     if not time.time() >= d_symbol_t_before_retrying[symbol]: # mettre un lock la dessus aussi ou pas ???
-      #print("timestamps is too young")
+      #log("timestamps is too young")
       continue
 
     bucket = d_symbol_bucket[symbol]
@@ -325,7 +326,7 @@ while True:
     relative_diff = d_symbol_relative_diff[symbol]
     condition_to_buy = (bucket == 1 and diff <= 0.005) # relative_diff # RD pk c est statique ca ??? et pas dynamique ??      WARNING:::: diff / price[0] EST CE BIEN COMME CA LAUTRE le jupyter
     if not condition_to_buy:
-      #print("no condition to buy: bucket={}, relative_diff={}".format(bucket, relative_diff))
+      #log("no condition to buy: bucket={}, relative_diff={}".format(bucket, relative_diff))
       continue
 
     # buying

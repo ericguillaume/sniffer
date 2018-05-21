@@ -112,13 +112,17 @@ if __name__ == "__main__":
   # end_timestamp = 1523311200
 
   # 2 months 15 days data
-  start_timestamp = 1518822000
-  end_timestamp = 1524348000
+  # start_timestamp = 1518822000
+  # end_timestamp = 1524348000
 
   # 2 months 15 days data
   # start_timestamp = 1512082800 # 1st December 2017
   # end_timestamp = 1524780000 # 17th april 2018
 
+  # 4 months
+  start_timestamp = 1518822000
+  end_timestamp = 1526810400
+  
   for symbol in SYMBOLS:
     sniff(start_timestamp, end_timestamp, symbol)
   

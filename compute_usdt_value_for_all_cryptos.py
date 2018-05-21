@@ -2,26 +2,26 @@ import csv
 
 
 
-from config import SYMBOLS, DATA_FOLDER_NAME_WRITE
+from config import SYMBOLS, DATA_FOLDER_NAME_READ
 from utils import convert_symbol_into_usdt
 
 
 
 def convert_to_usdt(symbol):
   print("going to work here")
-  print("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME_WRITE, symbol))
+  print("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME_READ, symbol))
 
   dict_btc_usdt = {}
-  with open("{}/binance_BTCUSDT_only_start_price.csv".format(DATA_FOLDER_NAME_WRITE), 'r') as csvfile:
+  with open("{}/binance_BTCUSDT_only_start_price.csv".format(DATA_FOLDER_NAME_READ), 'r') as csvfile:
     spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
     for row in spamreader:
       dict_btc_usdt[int(row[0])] = float(row[1])
 
   usdt_symbol = convert_symbol_into_usdt(symbol)
 
-  print("going to write in {}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME_WRITE, usdt_symbol))
-  f_start_price = open("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME_WRITE, usdt_symbol), 'w+')
-  with open("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME_WRITE, symbol), 'r') as csvfile:
+  print("going to write in {}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME_READ, usdt_symbol))
+  f_start_price = open("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME_READ, usdt_symbol), 'w+')
+  with open("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME_READ, symbol), 'r') as csvfile:
     spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
     for row in spamreader:
       timestamp = int(row[0])

@@ -1,3 +1,4 @@
+import sys
 
 
 
@@ -25,4 +26,9 @@ CATEGORY_3_DASH_PATTERNS = ["solid", "dashed"] # "dotted"
 def get_dash_pattern(index):
     index = index % len(CATEGORY_3_DASH_PATTERNS)
     return CATEGORY_3_DASH_PATTERNS[index]
+
+
+def log(message):
+	print(message)
+	sys.stdout.flush()
 
