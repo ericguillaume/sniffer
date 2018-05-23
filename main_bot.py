@@ -333,11 +333,13 @@ class BuyManager(threading.Thread):
 
 
 
-# start_timestamp = 
-# end_timestamp =
+# start_timestamp = 1526378400
+# end_timestamp = 1526810400
 # TimeManager.set_timestamp(start_timestamp)
+TimeManager.set_mode_real_time()
 
 
+min_diff_domains_to_buy_or_sell = 0.60 # 0.8 ????
 
 
 
@@ -394,7 +396,6 @@ while True:
   # todo minutes_before_retrying
 
   timpestamp_start_deciding_to_buy = time.time()
-  min_diff_domains_to_buy_or_sell = 0.90 # 0.8 ????
   for symbol in selected_symbols:
 
     #diff = d_symbol_diff[symbol]   pas ca ?????
