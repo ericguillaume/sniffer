@@ -22,6 +22,7 @@ from utils import is_symbol_in_usdt, convert_symbol_into_usdt, log
 class TimeManager:
 
   timestamp = None # "now" or timestamp
+  end_timestamp = None
 
   @classmethod
   def set_mode_real_time(cls):
@@ -34,8 +35,9 @@ class TimeManager:
     return TimeManager.timestamp == "now"
 
   @classmethod
-  def set_timestamp(cls, timestamp):
-    TimeManager.timestamp = timestamp
+  def set_timestamp(cls, start_timestamp, end_timestamp):
+    TimeManager.timestamp = start_timestamp
+    TimeManager.end_timestamp = end_timestamp
 
   @classmethod
   def add_seconds(cls, seconds):
@@ -297,6 +299,7 @@ class BuyManager(threading.Thread):
     self.symbol = symbol
     self.keep_for_k_minutes = keep_for_k_minutes
     self.buy_price = buy_price
+    self.buy_offline_timestamp = TimeManager.time() if TimeManager.is_real_time() else 0
 
   def run(self):
     if not TimeManager.is_real_time():
@@ -329,13 +332,50 @@ class BuyManager(threading.Thread):
             .format(self.symbol, relative_profit, buy_time, self.buy_price, sell_time, sell_price))
     return True
 
+  def update(self):
+    if TimeManager.is_real_time():
+      return True
+
+    # BUY BEFORE SOMEWHERE IN THE CONSTRUCTOR
+
+    if not (TimeManager.time() >= self.buy_offline_timestamp + (self.keep_for_k_minutes * 60)):
+      return True
+
+    # SELL
+
+    # log du temps depuis ???
+    log("SOLD {}: relative_profit = {}  ---  bought at time {} price {}, sell at time: {}, price: {}"\
+            .format(self.symbol, relative_profit, buy_time, self.buy_price, sell_time, sell_price))
+
+    # REMOVE FROM LIST
+
+
+
+
+class BuyManagers():
+  def __init__(self):
+    self.buy_managers = []
+
+  def add(self, buy):
+    self.buy_managers.append(buy)
+
+  def update(self):
+    buy_managers_to_remove = []
+    for buy in self.buy_managers:
+      should_keep = buy.update()
+      if not should_keep:
+        buy_managers_to_remove.append(buy)
+
+    # remove all the old ones
+
+
 
 
 
 
 # start_timestamp = 1526378400
 # end_timestamp = 1526810400
-# TimeManager.set_timestamp(start_timestamp)
+# TimeManager.set_timestamp(start_timestamp, end_timestamp)
 TimeManager.set_mode_real_time()
 
 
@@ -364,6 +404,8 @@ d_symbol_bucket = {} # its the usdt bucket
 d_symbol_t_before_retrying = {}
 dont_touch_same_currency_for_n_minutes = 50 # todo at start how can it be ????? evaluate !!!!!!!!!!!!!!
 
+buy_managers = BuyManagers()
+
 timestamp = TimeManager.time()
 for symbol in selected_symbols:
   d_symbol_t_before_retrying[symbol] = 0 # timestamp + (60 * 1) # timestamp + dont_touch_same_currency_for_n_minutes ??????   attention secondes minutes
@@ -371,6 +413,8 @@ for symbol in selected_symbols:
 while True:
   log("entering big loop to check for BUYING, t: {}".format(int(TimeManager.time())))
   timpestamp_start_compute_features = time.time()
+
+  buy_managers.update()
 
   # compute diffs, buckets etc..
   d_symbol_last_price = prices_manager.get_last_usdt_prices(selected_symbols)
@@ -422,6 +466,7 @@ while True:
 
     d_symbol_t_before_retrying[symbol] = TimeManager.time() + (dont_touch_same_currency_for_n_minutes * 60)
     buy = BuyManager(symbol, keep_for_k_minutes, buy_price)
+    buy_managers.append(buy)
     buy.start()
 
   timpestamp_end_deciding_to_buy = time.time()
