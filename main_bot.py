@@ -95,6 +95,9 @@ class AllSymbolPricesManager:
   def get_btc_price(self, timestamp):
     return self.d_symbol_container["BTCUSDT"].get_price(timestamp)
 
+  def get_last_price(self, symbol):
+    return self.d_symbol_container[symbol].get_last_price() # mettre un cache ici, ptet trop d appel sinon ??
+
 
 
 
@@ -165,12 +168,8 @@ class SymbolPricesContainer:
       raise Exception("ERROR query_and_add_price didnt return anything for symbol: {} and timestamp: {}".format(symbol, timestamp))
 
 
-  # attention price can be very very far :/    FETCH IT IF NEED BE
-  def get_price(self, timestamp): # tester temps, si marche pas passer en dichotomie
-    self.lock.acquire()
-    if len(self.array_timestamp_price) == 0:
-      raise Exception("ERROR price asked while there was none for symbol = {}".format(symbol))
-
+  # not thread safe
+  def get_already_cached_price(self, timestamp):
     is_smallest_distance_defined = False
     smallest_distance = 0.0
     smallest_distance_price = 0.0
@@ -187,10 +186,26 @@ class SymbolPricesContainer:
           smallest_distance = distance
           smallest_distance_price = price
           smallest_distance_timestamp = t
+    return smallest_distance, smallest_distance_price, smallest_distance_timestamp
+
+
+  # attention price can be very very far :/    FETCH IT IF NEED BE
+  def get_price(self, timestamp): # tester temps, si marche pas passer en dichotomie
+    self.lock.acquire()
+    search_cache = True
+
+    if len(self.array_timestamp_price) == 0:
+      search_cache = False
+
+    smallest_distance = 0.0
+    smallest_distance_price = 0.0
+    smallest_distance_timestamp = 0.0
+    if search_cache:
+      smallest_distance, smallest_distance_price, smallest_distance_timestamp = self.get_already_cached_price(timestamp)
     self.lock.release()
 
     #log("smallest_distance = {}".format(smallest_distance))
-    if smallest_distance <= SymbolPricesContainer.max_time_price_can_be_late:
+    if search_cache and smallest_distance <= SymbolPricesContainer.max_time_price_can_be_late:
       log("DEBUG get_price: FOUND {} late by {} s".format(self.symbol, timestamp - smallest_distance_timestamp))
       return smallest_distance_price
     else:
@@ -238,7 +253,7 @@ class ThreadUpdatePricesBinance(threading.Thread):
 
 
 def do_get_current_price(symbol): # on manipule des USDT OU DES BTC ICI ???
-  if not TimeManager.is_real_time():
+  if not TimeManager.is_real_time():  # remplacer ici par fonction last_price pour pouvoir l utiliser
     raise Exception("ERROR do_get_current_price called in not real time mode")
 
   try:
@@ -305,7 +320,7 @@ class BuyManager(threading.Thread):
     if not TimeManager.is_real_time():
       return True
 
-    log("we are going to buy {}".format(symbol))
+    log("we are going to buy {}".format(self.symbol))
     buy_time = TimeManager.time()
 
     ## buy here
@@ -332,51 +347,71 @@ class BuyManager(threading.Thread):
             .format(self.symbol, relative_profit, buy_time, self.buy_price, sell_time, sell_price))
     return True
 
-  def update(self):
+  # code en doublee par rapport a au dessus
+  def offline_buy(prices_manager):
     if TimeManager.is_real_time():
-      return True
+      return
+    
+    self.buy_price = self.get_last_price(symbol)
+    log("we are going to buy {}".format(self.symbol))
 
-    # BUY BEFORE SOMEWHERE IN THE CONSTRUCTOR
+
+
+  def update(self, prices_manager):
+    if TimeManager.is_real_time():
+      should_keep = True
+      return should_keep
 
     if not (TimeManager.time() >= self.buy_offline_timestamp + (self.keep_for_k_minutes * 60)):
-      return True
+      should_keep = True
+      return should_keep
 
-    # SELL
+    sell_price = prices_manager.get_last_price(self.symbol)
 
-    # log du temps depuis ???
+    log("sell_price = {}".format(sell_price))
+    profit = sell_price - self.buy_price
+    relative_profit = profit / self.buy_price
+
+    time_currency_kept = sell_time - buy_time
+    log("DEBUG time_currency_kept: {}, diff with expected = {}" \
+      .format(time_currency_kept, abs(time_currency_kept - self.keep_for_k_minutes * 60)))
     log("SOLD {}: relative_profit = {}  ---  bought at time {} price {}, sell at time: {}, price: {}"\
             .format(self.symbol, relative_profit, buy_time, self.buy_price, sell_time, sell_price))
 
-    # REMOVE FROM LIST
+    should_keep = False
+    return should_keep
 
 
 
 
-class BuyManagers():
-  def __init__(self):
-    self.buy_managers = []
+class BuyManagers():# lui fqire gerer les buy mqnqger ,les creer leur passer les references..gerer tout le cycle de vie
+  def __init__(self, prices_manager):
+    self.buy_managers = {}
+    self.prices_manager = prices_manager
 
   def add(self, buy):
-    self.buy_managers.append(buy)
+    buy.offline_buy(self.prices_manager)
+    self.buy_managers.add(buy)
 
   def update(self):
     buy_managers_to_remove = []
     for buy in self.buy_managers:
-      should_keep = buy.update()
+      should_keep = buy.update(self.prices_manager)
       if not should_keep:
         buy_managers_to_remove.append(buy)
 
-    # remove all the old ones
+    for buy_manager_to_remove in buy_managers_to_remove:
+      self.buy_managers.remove(buy_manager_to_remove)
 
 
 
 
 
 
-# start_timestamp = 1526378400
-# end_timestamp = 1526810400
-# TimeManager.set_timestamp(start_timestamp, end_timestamp)
-TimeManager.set_mode_real_time()
+start_timestamp = 1526378400
+end_timestamp = 1526810400
+TimeManager.set_timestamp(start_timestamp, end_timestamp)
+#TimeManager.set_mode_real_time()
 
 
 min_diff_domains_to_buy_or_sell = 0.60 # 0.8 ????
@@ -404,7 +439,7 @@ d_symbol_bucket = {} # its the usdt bucket
 d_symbol_t_before_retrying = {}
 dont_touch_same_currency_for_n_minutes = 50 # todo at start how can it be ????? evaluate !!!!!!!!!!!!!!
 
-buy_managers = BuyManagers()
+buy_managers = BuyManagers(prices_manager)
 
 timestamp = TimeManager.time()
 for symbol in selected_symbols:
@@ -466,7 +501,7 @@ while True:
 
     d_symbol_t_before_retrying[symbol] = TimeManager.time() + (dont_touch_same_currency_for_n_minutes * 60)
     buy = BuyManager(symbol, keep_for_k_minutes, buy_price)
-    buy_managers.append(buy)
+    buy_managers.add(buy) # tout devrqit etre gerr par buy managers
     buy.start()
 
   timpestamp_end_deciding_to_buy = time.time()
