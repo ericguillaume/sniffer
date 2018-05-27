@@ -32,3 +32,10 @@ def log(message):
 	print(message)
 	sys.stdout.flush()
 
+def unstring_float(elem):
+  if type(elem) == int:
+    return elem
+  else:
+    return float(elem)
+
+    
