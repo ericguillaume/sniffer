@@ -4,7 +4,9 @@ from utils import convert_symbol_into_usdt
 
 
 SYMBOLS = ["BTCUSDT", "ETHBTC", "XRPBTC", "BCCBTC", "LTCBTC", "EOSBTC", "ADABTC", "XLMBTC", "NEOBTC", "IOTABTC", \
-             "XMRBTC", "DASHBTC", "XEMBTC", "TRXBTC", "VENBTC", "ETCBTC", "BNBBTC", "QTUMBTC", "OMGBTC", "XVGBTC", \
+             "XMRBTC", "DASHBTC", 
+             #"XEMBTC",   seems to have problems getting data, see https://api.binance.com/api/v1/klines?symbol=XEMBTC&interval=1m&limit=500&startTime=1518821940000&endTime=1518822060000
+             "TRXBTC", "VENBTC", "ETCBTC", "BNBBTC", "QTUMBTC", "OMGBTC", "XVGBTC", \
              "LSKBTC", "ONTBTC", "ICXBTC", "ZECBTC", "NANOBTC", "BTGBTC", "STEEMBTC", "WANBTC", "PPTBTC", "BTSBTC", \
              "DGDBTC", "STRATBTC", "WAVESBTC", "ZILBTC"]
 

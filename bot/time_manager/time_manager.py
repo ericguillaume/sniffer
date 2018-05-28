@@ -1,6 +1,9 @@
 import time
 import threading
 
+from utils import log
+
+
 
 class TimeManager:
 
@@ -13,18 +16,21 @@ class TimeManager:
   @classmethod
   def set_live(cls):
     TimeManager.mode = "live"
+    log("TimeManager: working with live mode")
 
   @classmethod
   def set_offline(cls, timestamp, end_timestamp):
     TimeManager.mode = "offline"
     TimeManager.timestamp = timestamp
     TimeManager.end_timestamp = end_timestamp
+    log("TimeManager: working with offline mode, start_timestamp = {}, end_timestamp = {}".format(timestamp, end_timestamp))
 
   @classmethod
   def set_debug(cls, timestamp, end_timestamp):
     TimeManager.mode = "debug"
     TimeManager.timestamp = timestamp
     TimeManager.end_timestamp = end_timestamp
+    log("TimeManager: working with debug mode, start_timestamp = {}, end_timestamp = {}".format(timestamp, end_timestamp))
 
   @classmethod
   def is_live(cls):

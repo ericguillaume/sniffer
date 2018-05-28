@@ -43,7 +43,7 @@ class PriceManager:
       return True, self.d_symbol_prices_mgr[symbol].get_price(TimeManager.time()), TimeManager.time() # dernier truc est pas vraiment le timestamp du price !!!!!
 
   def get_kline_hour_symbol_price(self, symbol, timestamp):
-    self.d_symbol_prices_mgr[symbol].get_kline_hour_symbol_price(timestamp)
+    self.d_symbol_prices_mgr[symbol].do_get_kline_hour_symbol_price(timestamp)
 
   # private methods
 
@@ -169,33 +169,38 @@ class SymbolPriceManager:
 
   # those methods do external calls
   def query_and_add_price(self, timestamp): # try twice catch error    # devrait pas etre la et enlever les import de urllopen, json
-    if TimeManager.is_offline():
-      self.do_get_kline_hour_symbol_price(timestamp)
+    try:
+      if TimeManager.is_offline():
+        self.do_get_kline_hour_symbol_price(timestamp)
 
-    self.qlm.queried()
+      self.qlm.queried()
 
-    one_minute_in_ms = 60000
-    timestamp_in_ms = int(timestamp * 1000)
-    limit = 500
+      one_minute_in_ms = 60000
+      timestamp_in_ms = int(timestamp * 1000)
+      limit = 500
 
-    url_to_call = "https://api.binance.com/api/v1/klines?symbol={}&interval=1m&limit={}&startTime={}&endTime={}" \
-      .format(self.symbol, limit, timestamp_in_ms - one_minute_in_ms, timestamp_in_ms + one_minute_in_ms)
-    html = urlopen(url_to_call)
+      url_to_call = "https://api.binance.com/api/v1/klines?symbol={}&interval=1m&limit={}&startTime={}&endTime={}" \
+        .format(self.symbol, limit, timestamp_in_ms - one_minute_in_ms, timestamp_in_ms + one_minute_in_ms)
+      html = urlopen(url_to_call)
 
-    result_code = html.getcode()
-    if result_code == 200:
-      data = html.read().decode("utf-8")
-      data = json.loads(data)
-      array_t_prices = [[float(x[0]) / 1000.0, float(x[1])] for x in data] # assert les types plus haut !!!!!!!!!!!!!!!!!!!!!!!!
+      result_code = html.getcode()
+      if result_code == 200:
+        data = html.read().decode("utf-8")
+        data = json.loads(data)
+        array_t_prices = [[float(x[0]) / 1000.0, float(x[1])] for x in data] # assert les types plus haut !!!!!!!!!!!!!!!!!!!!!!!!
 
-      for timestamp, price in array_t_prices:
-        self.add_price(timestamp, price) # dichotomie permet de se contenter de faire ca !!!  GERER CAS D ERREUR ICI   THROW ERROR SI RIEN.   # shouldnot add price here maybe ??
-      if abs(array_t_prices[0][0] - timestamp) < abs(array_t_prices[1][0] - timestamp):
-        return array_t_prices[0]
+        for timestamp, price in array_t_prices:
+          self.add_price(timestamp, price) # dichotomie permet de se contenter de faire ca !!!  GERER CAS D ERREUR ICI   THROW ERROR SI RIEN.   # shouldnot add price here maybe ??
+        if abs(array_t_prices[0][0] - timestamp) < abs(array_t_prices[1][0] - timestamp):
+          return array_t_prices[0]
+        else:
+          return array_t_prices[1]
       else:
-        return array_t_prices[1]
-    else:
-      raise Exception("ERROR query_and_add_price didnt return anything for symbol: {} and timestamp: {}".format(self.symbol, timestamp))
+        raise Exception("ERROR query_and_add_price didnt return anything for symbol: {} and timestamp: {}".format(self.symbol, timestamp))
+    except Exception as e:
+      log(self.symbol)
+      log(url_to_call)
+      log(e)
 
   # works only with btc prices not usdt
   def do_get_current_price(self):

@@ -18,6 +18,7 @@ class Algo():
 
   def start(self):
     # algo params
+    number_currencies_kept = 30 # limiter LATER
     bucket_middle = 0.003 # sure ou 0.004 ???      0 ???
     keep_for_k_minutes = 10
     dont_touch_same_currency_for_n_minutes = 50 # todo at start how can it be ????? evaluate !!!!!!!!!!!!!!
@@ -28,12 +29,12 @@ class Algo():
     debug_delay = False
 
 
-    start_timestamp = 1527351512 - (24 * 3600)
-    end_timestamp = 1527351512 
+    start_timestamp = 1524861267
+    end_timestamp = 1526810400 
     TimeManager.set_offline(start_timestamp, end_timestamp)
     #TimeManager.set_live()
 
-    selected_symbols = SYMBOLS[:30] # limiter later
+    selected_symbols = SYMBOLS[:number_currencies_kept] 
 
     qlm = QueryLimitManager()
     price_manager = PriceManager(selected_symbols, qlm, debug_delay)
@@ -59,7 +60,7 @@ class Algo():
 
     should_continue = True
     while should_continue:
-      log("entering big loop to check for BUYING, t: {}".format(int(TimeManager.time())))
+      loop_message = "entering big loop to check for BUYING, t: {}".format(int(TimeManager.time()))
 
       # compute diffs, buckets etc..
       d_symbol_last_price = price_manager.get_last_usdt_prices(selected_symbols)
@@ -68,6 +69,7 @@ class Algo():
       d_symbol_diff, d_symbol_relative_diff, d_symbol_bucket, domain_diffs = \
         self.compute_features(selected_symbols, bucket_middle, d_symbol_last_price, d_symbol_old_price)
 
+      log(loop_message + " and domain_diffs: {}".format(domain_diffs))
 
       for symbol in selected_symbols:
         #diff = d_symbol_diff[symbol]   pas ca ?????
@@ -92,7 +94,7 @@ class Algo():
 
       qlm.sleep_to_limit_query_rate()
       should_continue = TimeManager.add_seconds(31) # 30 would make us have a regular modulo toward the minute
-      buy_manager.time_was_updated
+      buy_manager.time_was_updated()
 
 
   def compute_features(self, selected_symbols, bucket_middle, d_symbol_last_price, d_symbol_old_price):
@@ -113,7 +115,6 @@ class Algo():
         #log("{} - cur_price: {}, old_price: {}, diff / old_price: {},bucket : {} ".format(symbol, cur_price, old_price, (diff / old_price), bucket))
         domain_diffs += bucket
     domain_diffs /= len(selected_symbols)
-    log("domain_diffs: {}".format(domain_diffs))
 
     return d_symbol_diff, d_symbol_relative_diff, d_symbol_bucket, domain_diffs
 

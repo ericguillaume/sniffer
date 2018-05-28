@@ -16,7 +16,6 @@ class QueryLimitManager():
   def queried(self):
     self.lock.acquire()
     self.queries_since_last_periods += 1
-    log("queried = {}".format(self.queries_since_last_periods))
     self.lock.release()
 
   def sleep_to_limit_query_rate(self):
