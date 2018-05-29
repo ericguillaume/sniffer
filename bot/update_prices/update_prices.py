@@ -26,6 +26,9 @@ class ThreadUpdateSymbolPrices(threading.Thread):
     self.price_manager = price_manager
     if TimeManager.is_live():
       self.price_manager.get_current_symbol_price(self.symbol) # add a first price so that the price_manager is not empty
+    if TimeManager.is_offline():
+      timestamp_to_query = TimeManager.time() - 3600
+      self.price_manager.get_kline_hour_symbol_price(self.symbol, timestamp_to_query)
 
   def run(self):
     if TimeManager.is_debug():

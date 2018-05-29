@@ -24,8 +24,8 @@ class RedisCache:
 
   def set(self, symbol, timestamp, array_timestamp_price):
     modulo_timestamp = self.get_bigger_modulo_timestamp(timestamp)
-    key = self.get_redis_key(symbol, timestamp, modulo_timestamp)
-    r.set(key, json.dumps(array_timestamp_price)) ##### VERIFIER LES TYPES ICI ET EN ENTREE
+    key = self.get_redis_key(symbol, modulo_timestamp)
+    self.r.set(key, json.dumps(array_timestamp_price)) ##### VERIFIER LES TYPES ICI ET EN ENTREE
 
 
 
@@ -34,7 +34,7 @@ class RedisCache:
   def get_redis_key(self, symbol, modulo_timestamp): # mettre exception la cle est bien modulo !!!!!
     return "{}_{}".format(symbol, int(modulo_timestamp))
 
-  def get_bigger_modulo_timestamp(timestamp):
+  def get_bigger_modulo_timestamp(self, timestamp):
     if timestamp % RedisCache.timestamp_cache_period == 0:
       return timestamp
     missing_value_to_reach_period = RedisCache.timestamp_cache_period - (timestamp % RedisCache.timestamp_cache_period)

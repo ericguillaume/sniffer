@@ -9,11 +9,12 @@ from bot.time_manager.time_manager import TimeManager
 
 
 class PriceManager:
-  def __init__(self, selected_symbols, qlm, debug_delay):
+  def __init__(self, selected_symbols, qlm, cache, debug_delay):
     self.qlm = qlm
+    self.cache = cache
     self.d_symbol_prices_mgr = {}
     for symbol in selected_symbols:
-       self.d_symbol_prices_mgr[symbol] = SymbolPriceManager(symbol, qlm, debug_delay)
+       self.d_symbol_prices_mgr[symbol] = SymbolPriceManager(symbol, qlm, cache, debug_delay)
 
   def get_last_usdt_prices(self, symbols): # on taffe avec les symbols initiaux, osef des usdt, il sont geres ici ...
     last_btc_price = self.get_last_btc_price()
@@ -64,8 +65,9 @@ class SymbolPriceManager:
   max_time_price_can_be_late = 45
 
   # verifier
-  def __init__(self, symbol, qlm, debug_delay):
+  def __init__(self, symbol, qlm, cache, debug_delay):
     self.qlm = qlm
+    self.cache = cache
     self.debug_delay = debug_delay
     self.symbol = symbol
     self.array_timestamp_price = []
@@ -150,7 +152,7 @@ class SymbolPriceManager:
         log("DEBUG get_price: FOUND {} late by {} s".format(self.symbol, timestamp - smallest_distance_timestamp))
       return smallest_distance_price
     else:
-      ticker_timpestamp, price = self.query_and_add_price(timestamp)
+      ticker_timpestamp, price = self.query_and_add_price(timestamp) # LATER return pas de success ou truc de ce genre
       if self.debug_delay:
         log("DEBUG get_price: QUERIED {} late by {} s".format(self.symbol, timestamp - ticker_timpestamp))
       return price
@@ -169,19 +171,19 @@ class SymbolPriceManager:
 
   # those methods do external calls
   def query_and_add_price(self, timestamp): # try twice catch error    # devrait pas etre la et enlever les import de urllopen, json
+    one_minute_in_ms = 60000
+    timestamp_in_ms = int(timestamp * 1000)
+    limit = 500
+
+    url_to_call = "https://api.binance.com/api/v1/klines?symbol={}&interval=1m&limit={}&startTime={}&endTime={}" \
+      .format(self.symbol, limit, timestamp_in_ms - one_minute_in_ms, timestamp_in_ms + one_minute_in_ms)
+    html = urlopen(url_to_call)
+
     try:
       if TimeManager.is_offline():
         self.do_get_kline_hour_symbol_price(timestamp)
 
       self.qlm.queried()
-
-      one_minute_in_ms = 60000
-      timestamp_in_ms = int(timestamp * 1000)
-      limit = 500
-
-      url_to_call = "https://api.binance.com/api/v1/klines?symbol={}&interval=1m&limit={}&startTime={}&endTime={}" \
-        .format(self.symbol, limit, timestamp_in_ms - one_minute_in_ms, timestamp_in_ms + one_minute_in_ms)
-      html = urlopen(url_to_call)
 
       result_code = html.getcode()
       if result_code == 200:
@@ -201,6 +203,7 @@ class SymbolPriceManager:
       log(self.symbol)
       log(url_to_call)
       log(e)
+      return 0, 0.0 # probleme price returned is nul
 
   # works only with btc prices not usdt
   def do_get_current_price(self):
@@ -232,6 +235,11 @@ class SymbolPriceManager:
     if not TimeManager.is_offline():
       raise Exception("ERROR do_get_kline_hour_symbol_price called not in offline mode")
 
+    cached_value = self.cache.get(self.symbol, timestamp) 
+    if not cached_value == None:
+      self.add_many_prices(cached_value)
+      return
+
     limit = 500
 
     try:
@@ -246,7 +254,9 @@ class SymbolPriceManager:
         data = html.read().decode("utf-8")
         data = json.loads(data)
         
-        array_timestamps_prices = [[unstring_float(row[0]) / 1000, float(row[1])] for row in data if len(row) == 12]
+        array_timestamps_prices = [[int(unstring_float(row[0]) / 1000), float(row[1])] for row in data if len(row) == 12] 
+        # checker partout c es dse int
+        self.cache.set(self.symbol, timestamp, array_timestamps_prices)
         self.add_many_prices(array_timestamps_prices)
 
       else:

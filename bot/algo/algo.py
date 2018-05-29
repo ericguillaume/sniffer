@@ -4,6 +4,7 @@ import time
 from config import SYMBOLS
 from utils import log
 from bot.time_manager.time_manager import TimeManager
+from bot.price_cache.redis_cache import RedisCache
 from bot.price_manager.query_limit_manager import QueryLimitManager
 from bot.price_manager.price_manager import PriceManager
 from bot.update_prices.update_prices import UpdatePrices
@@ -36,8 +37,10 @@ class Algo():
 
     selected_symbols = SYMBOLS[:number_currencies_kept] 
 
+    cache = RedisCache()
+
     qlm = QueryLimitManager()
-    price_manager = PriceManager(selected_symbols, qlm, debug_delay)
+    price_manager = PriceManager(selected_symbols, qlm, cache, debug_delay)
 
     seconds_between_queries = 15
     update_price = UpdatePrices(selected_symbols, price_manager, seconds_between_queries)
