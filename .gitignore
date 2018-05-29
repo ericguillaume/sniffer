@@ -5,3 +5,4 @@ archive/csv/
 data/
 *.html
 *.pyc
+log/*
