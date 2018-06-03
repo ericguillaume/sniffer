@@ -38,4 +38,9 @@ def unstring_float(elem):
   else:
     return float(elem)
 
-    
+def date_to_string(date):
+  return date.strftime("%Y-%m-%d")
+
+def string_to_date(string):
+  return datetime.strptime(string, "%Y-%m-%d")
+
