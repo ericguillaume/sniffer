@@ -33,9 +33,9 @@ class MockedRedis():
 class TestRedisCache(unittest.TestCase):
 
   def setUp(self):
-    use_redis = True
+    use_redis_cache = True
     mock_redis = True
-    self.redis_cache = RedisCache(use_redis, mock_redis)
+    self.redis_cache = RedisCache(use_redis_cache, mock_redis)
     self.mocked_redis = MockedRedis()
     self.redis_cache.set_redis(self.mocked_redis)
     self.symbol = "USD"

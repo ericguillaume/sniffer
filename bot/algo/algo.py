@@ -28,7 +28,7 @@ class Algo():
 
     # platform params
     debug_delay = False
-    use_redis = False
+    use_redis_cache = True
 
     # time and mode params
     start_timestamp = 1524861267
@@ -41,7 +41,7 @@ class Algo():
 
     selected_symbols = SYMBOLS[:number_currencies_kept] 
 
-    cache = RedisCache(use_redis)
+    cache = RedisCache(use_redis_cache)
 
     qlm = QueryLimitManager()
     price_manager = PriceManager(selected_symbols, qlm, cache, debug_delay)

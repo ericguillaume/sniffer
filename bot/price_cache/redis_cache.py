@@ -8,15 +8,15 @@ class RedisCache:
   timestamp_cache_period = 100 * 60
   binance_query_data_duration_in_s = 500 * 60
 
-  def __init__(self, use_redis, mock_redis):
-    self.use_redis = use_redis
+  def __init__(self, use_redis_cache, mock_redis):
+    self.use_redis_cache = use_redis_cache
     self.mock_redis = mock_redis
-    if self.use_redis and not mock_redis:
+    if self.use_redis_cache and not mock_redis:
       self.r = redis.StrictRedis(host='localhost', port=6379, db=0) # gerer toutes lse erreurs si el redis est pas connecte !!!
 
   # returns None if nothing is found
   def get(self, symbol, timestamp):
-    if not self.use_redis:
+    if not self.use_redis_cache:
       return None
 
     first_modulo_timestamp = self.get_bigger_modulo_timestamp(timestamp - RedisCache.binance_query_data_duration_in_s + RedisCache.timestamp_cache_period)
@@ -31,7 +31,7 @@ class RedisCache:
     return result
 
   def set(self, symbol, timestamp, array_timestamp_price):
-    if not self.use_redis:
+    if not self.use_redis_cache:
       return
 
     modulo_timestamp = self.get_bigger_modulo_timestamp(timestamp)
