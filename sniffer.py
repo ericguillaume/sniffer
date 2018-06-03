@@ -7,6 +7,8 @@ import json
 
 
 from config import SYMBOLS, DATA_FOLDER_NAME_WRITE
+from bot.price_cache.redis_cache import RedisCache
+
 
 
 class ThreadQueryBinance (threading.Thread):
@@ -42,15 +44,22 @@ def unstring_float(elem):
     return float(elem)
 
 
-def sniff(start_timestamp, end_timestamp, symbol):
+def sniff(write_to_file, start_timestamp, end_timestamp, symbol):
   nb_threads = 10
   step_in_seconds = 60
   limit = 500
 
   start_timestamp *= 1000
   end_timestamp *= 1000
-  f = open("{}/binance_{}.csv".format(DATA_FOLDER_NAME_WRITE, symbol), 'w+')
-  f_start_price = open("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME_WRITE, symbol), 'w+')
+
+  use_redis_cache = True
+  mock_redis = False
+  r = RedisCache(use_redis_cache, mock_redis)
+
+  if write_to_file:
+    f = open("{}/binance_{}.csv".format(DATA_FOLDER_NAME_WRITE, symbol), 'w+')
+    f_start_price = open("{}/binance_{}_only_start_price.csv".format(DATA_FOLDER_NAME_WRITE, symbol), 'w+')
+
   queue = Queue()
   step_size_in_ms = step_in_seconds * limit * 1000
   for timestamp_group_start in range(start_timestamp, end_timestamp, nb_threads * step_size_in_ms):
@@ -79,14 +88,19 @@ def sniff(start_timestamp, end_timestamp, symbol):
     # sort rows
     data = sorted(data, key=lambda x: x[0])
 
+    # add data to redis cache
+    array_timestamp_price = [row[:2] for row in data]
+    r.set_if_not_already_in(symbol, array_timestamp_price[0][0], array_timestamp_price)
+
     # write data
     for row in data:
       row = [str(x) for x in row]
       row_to_write = ','.join(row) + "\n"
       row_to_write_start_price = ','.join(row[:2]) + "\n"
-      print(row_to_write_start_price)
-      f.write(row_to_write)
-      f_start_price.write(row_to_write_start_price)
+
+      if write_to_file:
+        f.write(row_to_write)
+        f_start_price.write(row_to_write_start_price)
     
     # manage time to avoid querying too much
     duration_small_serie = time.time() - start_small_serie_time
@@ -94,11 +108,13 @@ def sniff(start_timestamp, end_timestamp, symbol):
     if (duration_small_serie < 1.0):
       time.sleep(1.0 - duration_small_serie)
 
-  f.close()
-  f_start_price.close()
+  if write_to_file:
+    f.close()
+    f_start_price.close()
 
 
 if __name__ == "__main__":
+  write_to_file = True
   # 1 month data
   # start_timestamp = 1519858800
   # end_timestamp = 1522533600
@@ -120,15 +136,21 @@ if __name__ == "__main__":
   # end_timestamp = 1524780000 # 17th april 2018
 
   # 4 months
-  start_timestamp = 1518822000
-  end_timestamp = 1526810400
+  #start_timestamp = 1518822000
+  #end_timestamp = 1526810400
 
   # 4 months v2
   #start_timestamp = 1526378400
   #end_timestamp = 1526810400
+
+  # big period
+  start_timestamp = 1518822000
+  end_timestamp = 1526810400
+  write_to_file = False
+
   
   for symbol in SYMBOLS:
-    sniff(start_timestamp, end_timestamp, symbol)
+    sniff(write_to_file, start_timestamp, end_timestamp, symbol)
   
 
 

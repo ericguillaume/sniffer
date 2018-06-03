@@ -30,6 +30,14 @@ class RedisCache:
       modulo_timestamp += RedisCache.timestamp_cache_period
     return result
 
+  def set_if_not_already_in(self, symbol, timestamp, array_timestamp_price):
+    cached_value = self.get(symbol, timestamp) 
+    if cached_value == None:
+      self.set(symbol, timestamp, array_timestamp_price)  
+      print("Added to Redis")
+    else:
+      print("Already in redis")
+
   def set(self, symbol, timestamp, array_timestamp_price):
     if not self.use_redis_cache:
       return
