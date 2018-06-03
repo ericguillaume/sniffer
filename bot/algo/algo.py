@@ -41,7 +41,8 @@ class Algo():
 
     selected_symbols = SYMBOLS[:number_currencies_kept] 
 
-    cache = RedisCache(use_redis_cache)
+    mock_redis = False
+    cache = RedisCache(use_redis_cache, mock_redis)
 
     qlm = QueryLimitManager()
     price_manager = PriceManager(selected_symbols, qlm, cache, debug_delay)
