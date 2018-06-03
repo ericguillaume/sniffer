@@ -24,7 +24,7 @@ class Algo():
     keep_for_k_minutes = 10
     dont_touch_same_currency_for_n_minutes = 50 # todo at start how can it be ????? evaluate !!!!!!!!!!!!!!
     min_diff_domains_to_buy_or_sell = 0.90 # 0.8 ????
-    buy_trigger = 0.005
+    buy_trigger = 0.006
 
     # platform params
     debug_delay = False
@@ -75,7 +75,6 @@ class Algo():
       log(loop_message + " and domain_diffs: {}".format(domain_diffs))
 
       for symbol in selected_symbols:
-        #diff = d_symbol_diff[symbol]   pas ca ?????
         if not (domain_diffs >= min_diff_domains_to_buy_or_sell):
           continue
 
@@ -84,7 +83,6 @@ class Algo():
           continue
 
         bucket = d_symbol_bucket[symbol]
-        diff = d_symbol_diff[symbol]
         diff = d_symbol_diff[symbol]
         relative_diff = d_symbol_relative_diff[symbol]
         condition_to_buy = (bucket == 1 and diff <= buy_trigger) # LATER relative_diff # RD pk c est statique ca ??? et pas dynamique ??      WARNING:::: diff / price[0] EST CE BIEN COMME CA LAUTRE le jupyter
