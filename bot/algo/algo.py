@@ -1,4 +1,4 @@
-# python3 -m bot.algo.algo | tee -a XXX
+# python3 -m bot.algo.algo | tee -a log/XXX
 import time
 
 from config import SYMBOLS
@@ -26,19 +26,22 @@ class Algo():
     diff_domain_buy_trigger = 0.6
     diff_upper_buy_condition = 0.005
 
-
     # platform params
     debug_delay = False
+    use_redis = False
 
-
+    # time and mode params
     start_timestamp = 1524861267
     end_timestamp = 1526810400 
     TimeManager.set_offline(start_timestamp, end_timestamp)
     #TimeManager.set_live()
 
+
+
+
     selected_symbols = SYMBOLS[:number_currencies_kept] 
 
-    cache = RedisCache()
+    cache = RedisCache(use_redis)
 
     qlm = QueryLimitManager()
     price_manager = PriceManager(selected_symbols, qlm, cache, debug_delay)

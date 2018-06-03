@@ -7,11 +7,16 @@ class RedisCache:
 
   timestamp_cache_period = 100
 
-  def __init__(self):
-    self.r = redis.StrictRedis(host='localhost', port=6379, db=0) # gerer toutes lse erreurs si el redis est pas connecte !!!
+  def __init__(self, use_redis):
+    self.use_redis = use_redis
+    if self.use_redis:
+      self.r = redis.StrictRedis(host='localhost', port=6379, db=0) # gerer toutes lse erreurs si el redis est pas connecte !!!
 
   # returns None if nothing is found
   def get(self, symbol, timestamp):
+    if not self.use_redis:
+      return None
+
     first_modulo_timestamp = self.get_bigger_modulo_timestamp(timestamp - 500)
 
     modulo_timestamp = first_modulo_timestamp
@@ -23,6 +28,9 @@ class RedisCache:
     return None
 
   def set(self, symbol, timestamp, array_timestamp_price):
+    if not self.use_redis:
+      return
+
     modulo_timestamp = self.get_bigger_modulo_timestamp(timestamp)
     key = self.get_redis_key(symbol, modulo_timestamp)
     self.r.set(key, json.dumps(array_timestamp_price)) ##### VERIFIER LES TYPES ICI ET EN ENTREE
