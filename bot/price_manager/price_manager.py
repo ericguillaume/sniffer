@@ -1,6 +1,7 @@
 import time
 import json
 import threading
+from collections import OrderedDict
 from urllib.request import urlopen
 
 from utils import log, is_symbol_in_usdt, unstring_float
@@ -60,7 +61,7 @@ class PriceManager:
 
 
 class SymbolPriceManager:
-  max_time_to_cache_prices = 20 * 3600
+  max_time_to_cache_prices = 300 * 60
   max_added_prices_before_cleaning = 100
   max_time_price_can_be_late = 45
 
@@ -90,21 +91,11 @@ class SymbolPriceManager:
 
     self.clean_old_positions_if_need_be()
 
-  # not thread safe 
-  def do_add_price(self, timestamp, price):
-    index_to_insert = self.get_first_older_element_index(timestamp)
-    self.array_timestamp_price.insert(index_to_insert, (timestamp, price))
-
   def add_many_prices(self, array_timestamps_prices):
-    self.lock.acquire()
     for timestamp_price in array_timestamps_prices:
       timestamp = timestamp_price[0]
       price = timestamp_price[1]
-      self.do_add_price(timestamp, price)
-    self.lock.release()
-
-    for _ in range(len(array_timestamps_prices)):
-      self.clean_old_positions_if_need_be()
+      self.add_price(timestamp, price)
 
   def clean_old_positions_if_need_be(self):
     self.added_prices_since_last_cache_clean += 1
@@ -114,9 +105,9 @@ class SymbolPriceManager:
   def clean_old_positions(self):
     timestamp = TimeManager.time()
     self.lock.acquire()
-    self.array_timestamp_price = [x for x in self.array_timestamp_price if
+    self.array_timestamp_price = list(OrderedDict.fromkeys([x for x in self.array_timestamp_price if
                                   x[0] >= timestamp - SymbolPriceManager.max_time_to_cache_prices and
-                                  x[0] <= timestamp + SymbolPriceManager.max_time_to_cache_prices]  # does it keep order
+                                  x[0] <= timestamp + SymbolPriceManager.max_time_to_cache_prices]))
     self.lock.release()
     self.added_prices_since_last_cache_clean = 0
 

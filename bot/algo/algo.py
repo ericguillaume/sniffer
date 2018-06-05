@@ -19,7 +19,7 @@ class Algo():
 
   def start(self):
     # algo params
-    number_currencies_kept = 30 # limiter LATER
+    number_currencies_kept = 30 # debug 5 # limiter LATER
     bucket_middle = 0.003 # sure ou 0.004 ???      0 ???
     keep_for_k_minutes = 10
     dont_touch_same_currency_for_n_minutes = 50 # todo at start how can it be ????? evaluate !!!!!!!!!!!!!!
@@ -50,6 +50,7 @@ class Algo():
     seconds_between_queries = 15
     update_price = UpdatePrices(selected_symbols, price_manager, seconds_between_queries)
     update_price.start()
+    time.sleep(5)
 
     buy_manager = BuyManager(price_manager, keep_for_k_minutes)
 
