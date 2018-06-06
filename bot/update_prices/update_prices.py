@@ -52,6 +52,7 @@ class ThreadUpdateSymbolPrices(threading.Thread):
     if TimeManager.is_live():
       while True:
         self.price_manager.get_current_symbol_price(self.symbol)
+        log("going to sleep {} s".format(self.seconds_between_queries))
         time.sleep(self.seconds_between_queries)
 
 

@@ -1,5 +1,7 @@
 import sys
 
+from bot.time_manager.time_manager import TimeManager
+
 
 
 def is_symbol_in_usdt(symbol):
@@ -29,8 +31,17 @@ def get_dash_pattern(index):
 
 
 def log(message):
-	print(message)
-	sys.stdout.flush()
+  print(message)
+  if TimeManager.is_live():
+    sys.stdout.flush()
+
+def log_time_manager_state():
+  if TimeManager.is_live():
+    log("TimeManager: working with live mode")
+  elif TimeManager.is_offline():
+    log("TimeManager: working with offline mode, start_timestamp = {}, end_timestamp = {}".format(TimeManager.get_timestamp(), TimeManager.get_end_timestamp()))
+  elif TimeManager.is_debug():
+    log("TimeManager: working with debug mode, start_timestamp = {}, end_timestamp = {}".format(TimeManager.get_timestamp(), TimeManager.get_end_timestamp()))
 
 def unstring_float(elem):
   if type(elem) == int:

@@ -61,7 +61,8 @@ class PriceManager:
 
 
 class SymbolPriceManager:
-  max_time_to_cache_prices = 300 * 60
+  max_time_to_cache_prices_before = 130 * 60
+  max_time_to_cache_prices_after = 300 * 60
   max_added_prices_before_cleaning = 100
   max_time_price_can_be_late = 45
 
@@ -96,6 +97,7 @@ class SymbolPriceManager:
       timestamp = timestamp_price[0]
       price = timestamp_price[1]
       self.add_price(timestamp, price)
+      time.sleep(0.001)
 
   def clean_old_positions_if_need_be(self):
     self.added_prices_since_last_cache_clean += 1
@@ -106,8 +108,8 @@ class SymbolPriceManager:
     timestamp = TimeManager.time()
     self.lock.acquire()
     self.array_timestamp_price = list(OrderedDict.fromkeys([x for x in self.array_timestamp_price if
-                                  x[0] >= timestamp - SymbolPriceManager.max_time_to_cache_prices and
-                                  x[0] <= timestamp + SymbolPriceManager.max_time_to_cache_prices]))
+                                  x[0] >= timestamp - SymbolPriceManager.max_time_to_cache_prices_before and
+                                  x[0] <= timestamp + SymbolPriceManager.max_time_to_cache_prices_after]))
     self.lock.release()
     self.added_prices_since_last_cache_clean = 0
 

@@ -2,7 +2,7 @@
 import time
 
 from config import SYMBOLS
-from utils import log
+from utils import log, log_time_manager_state
 from bot.time_manager.time_manager import TimeManager
 from bot.price_cache.redis_cache import RedisCache
 from bot.price_manager.query_limit_manager import QueryLimitManager
@@ -34,6 +34,7 @@ class Algo():
     start_timestamp = 1524861267
     end_timestamp = 1526810400 
     TimeManager.set_offline(start_timestamp, end_timestamp)
+    log_time_manager_state()
     #TimeManager.set_live()
 
 
