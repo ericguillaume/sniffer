@@ -11,6 +11,7 @@ class RedisCache:
   def __init__(self, use_redis_cache, mock_redis):
     self.use_redis_cache = use_redis_cache
     self.mock_redis = mock_redis
+    self.number_set_since_last_save = 0
     if self.use_redis_cache and not mock_redis:
       self.r = redis.StrictRedis(host='localhost', port=6379, db=0) # gerer toutes lse erreurs si el redis est pas connecte !!!
 
@@ -46,6 +47,9 @@ class RedisCache:
     key = self.get_redis_key(symbol, modulo_timestamp)
     self.r.set(key, json.dumps(array_timestamp_price)) ##### VERIFIER LES TYPES ICI ET EN ENTREE
 
+    self.number_set_since_last_save += 1
+    self.save_to_disk_if_need_be()
+
 
 
   # private functions
@@ -64,6 +68,11 @@ class RedisCache:
       return timestamp
     missing_value_to_reach_period = RedisCache.timestamp_cache_period - (timestamp % RedisCache.timestamp_cache_period)
     return timestamp + missing_value_to_reach_period
+
+  def save_to_disk_if_need_be(self):
+    if self.number_set_since_last_save >= 50:
+      self.r.bgsave() # save() exists too
+      self.number_set_since_last_save = 0
 
 
 
