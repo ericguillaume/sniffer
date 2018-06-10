@@ -1,4 +1,5 @@
 # python3 -m bot.algo.algo | tee -a log/XXX
+# cat log/XXX | grep shortcut | awk '{print $1;}' > log/XXX_price.csv
 import time
 
 from config import SYMBOLS
