@@ -1,7 +1,7 @@
 import time
 import threading
 
-from utils import log
+from utils import log, is_symbol_in_usdt
 from bot.time_manager.time_manager import TimeManager
 
 
@@ -42,6 +42,7 @@ class SymbolBuyManager(threading.Thread):
     self.price_manager = price_manager
     self.symbol = symbol
     self.keep_for_k_minutes = keep_for_k_minutes
+    self.to_usdt_coeff = 1 if is_symbol_in_usdt(symbol) else self.price_manager.get_last_btc_price()
 
   def buy(self):
     # buying
@@ -49,8 +50,8 @@ class SymbolBuyManager(threading.Thread):
     if not success:
       return
 
-    self.buy_price = buy_price
     log("we are going to buy {} at price = {}".format(self.symbol, buy_price))
+    self.buy_price_usdt = buy_price * self.to_usdt_coeff
 
     if TimeManager.is_live():
       self.start()
@@ -74,18 +75,19 @@ class SymbolBuyManager(threading.Thread):
     success, sell_price, _ = self.price_manager.get_current_symbol_price(self.symbol)  # try twice
     if not success:
       log("couldn't sell {} bought at time {} price {}, sell at time :{}"\
-            .format(self.symbol, buy_time, self.buy_price, sell_time))
+            .format(self.symbol, buy_time, self.buy_price_usdt, sell_time))
       return True
     log("sell_price = {}".format(sell_price))
+    sell_price_usdt = sell_price * self.to_usdt_coeff
 
-    profit = sell_price - self.buy_price
-    relative_profit = profit / self.buy_price
+    profit = sell_price_usdt - self.buy_price_usdt
+    relative_profit = profit / self.buy_price_usdt
     time_currency_kept = sell_time - buy_time
     log("{} # shortcut_relative_profit".format(relative_profit))
     log("DEBUG time_currency_kept: {}, diff with expected = {}" \
       .format(time_currency_kept, abs(time_currency_kept - self.keep_for_k_minutes * 60)))
-    log("SOLD {}: relative_profit = {}  ---  bought at time {} price {}, sell at time: {}, price: {}"\
-            .format(self.symbol, relative_profit, buy_time, self.buy_price, sell_time, sell_price))
+    log("SOLD {}: relative_profit = {}  ---  bought at time {} price {} usdt, sell at time: {}, price: {} usdt"\
+            .format(self.symbol, relative_profit, buy_time, self.buy_price_usdt, sell_time, sell_price_usdt))
     return True
 
 
@@ -101,15 +103,16 @@ class SymbolBuyManager(threading.Thread):
     success, sell_price, sell_time = self.price_manager.get_current_symbol_price(self.symbol)
     if not success:
       log("couldn't sell {} bought at time {} price {}, sell at time :{}"\
-            .format(self.symbol, self.buy_offline_timestamp, self.buy_price, sell_time))
+            .format(self.symbol, self.buy_offline_timestamp, self.buy_price_usdt, sell_time))
       return True
     log("sell_price = {}".format(sell_price))
+    sell_price_usdt = sell_price * self.to_usdt_coeff
 
-    profit = sell_price - self.buy_price
-    relative_profit = profit / self.buy_price
+    profit = sell_price_usdt - self.buy_price_usdt
+    relative_profit = profit / self.buy_price_usdt
     log("{}, # shortcut_relative_profit".format(relative_profit))
-    log("SOLD {}: relative_profit = {}  ---  bought at time {} price {}, sell at time: {}, price: {}"\
-            .format(self.symbol, relative_profit, self.buy_offline_timestamp, self.buy_price, sell_time, sell_price))
+    log("SOLD {}: relative_profit = {}  ---  bought at time {} price {} usdt, sell at time: {}, price: {} usdt"\
+            .format(self.symbol, relative_profit, self.buy_offline_timestamp, self.buy_price_usdt, sell_time, sell_price_usdt))
 
     should_keep = False
     return should_keep
